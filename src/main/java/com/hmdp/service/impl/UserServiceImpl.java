@@ -16,7 +16,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +31,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public Result sendCode(String phone, HttpSession session) {
+    public Result sendCode(String phone) {
         // 1. 验证手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
             return Result.fail("手机号不对哦");
@@ -54,7 +53,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    public Result login(LoginFormDTO loginForm, HttpSession session) {
+    public Result login(LoginFormDTO loginForm) {
         // 1. 取出验证码和手机号
         String code = loginForm.getCode();
         String phone = loginForm.getPhone();
@@ -86,7 +85,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String token = UUID.randomUUID().toString();
         String tokenKey = LOGIN_USER_KEY + token;
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        session.setAttribute("user", userDTO);
+
         HashMap<String, String> userMap = new HashMap<>();
         userMap.put("icon", userDTO.getIcon());
         userMap.put("id", String.valueOf(userDTO.getId()));
@@ -97,6 +96,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         stringRedisTemplate.delete(LOGIN_CODE_KEY + phone);
 
         return Result.ok(token);
+    }
+
+    @Override
+    public Result logout(String token) {
+        stringRedisTemplate.delete(RedisConstants.LOGIN_USER_KEY + token);
+        return Result.ok();
     }
 
     private User createUserWithPhone(String phone) {
